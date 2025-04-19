@@ -1,3 +1,6 @@
+USE Titanic
+GO
+
 SELECT *
 FROM dbo.train;
 
@@ -42,4 +45,50 @@ FROM age_group
 GROUP BY AGE_GROUPS
 ORDER BY survival_rate;
 
+-- 2) FARE ANALYSIS
+-- average fare by Pclass
+SELECT 
+CASE
+	WHEN Pclass = 1 THEN '1st Class'
+	WHEN Pclass = 2 THEN '2nd Class'
+	WHEN Pclass = 3 THEN '3rd Class'
+END AS Ticket_Class,
+ROUND(AVG(DISTINCT CAST(Fare AS FLOAT)), 2) Total_Fare
+FROM 
+dbo.train
+GROUP BY Pclass
+ORDER BY AVG(DISTINCT CAST(Fare AS FLOAT));
 
+-- SURVIAVAL ANALYSIS OF PASSENGER DEPENDING THE CLASS THEY HAVE BOOKED
+-- Did passengers who paid higher fares survive more?
+SELECT 
+Pclass,
+ROUND(AVG (CAST(Fare AS FLOAT)),2)  Aveage_Fare,
+COUNT(PassengerId) Total_passanger,
+SUM(CAST(Survived AS INT)) AS total_survived_passengers,
+round(SUM(CAST(Survived AS FLOAT)) / COUNT(*), 2) AS survival_rate
+FROM 
+dbo.train
+GROUP BY Pclass
+ORDER BY survival_rate DESC;
+
+--What is the fare distribution by embarkation port?
+SELECT 
+CASE
+	WHEN Embarked = 'C' THEN 'Cherbourg'
+	WHEN Embarked = 'Q' THEN 'Queenstown'
+	WHEN Embarked = 'S' THEN 'Southampton'
+END AS Embarked,
+COUNT(PassengerId) Total_passanger,
+SUM(CAST(Survived AS INT)) AS total_survived_passengers,
+round(SUM(CAST(Survived AS FLOAT)) / COUNT(*), 2) AS survival_rate,
+ROUND(AVG (CAST(Fare AS FLOAT)),2)  Aveage_Fare
+FROM 
+dbo.train
+WHERE Embarked IS NOT NULL
+GROUP BY CASE
+	WHEN Embarked = 'C' THEN 'Cherbourg'
+	WHEN Embarked = 'Q' THEN 'Queenstown'
+	WHEN Embarked = 'S' THEN 'Southampton'
+END
+ORDER BY survival_rate DESC;
