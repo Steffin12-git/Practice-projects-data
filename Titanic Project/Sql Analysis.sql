@@ -92,3 +92,38 @@ GROUP BY CASE
 	WHEN Embarked = 'S' THEN 'Southampton'
 END
 ORDER BY survival_rate DESC;
+
+
+
+
+-- 3) Family Relationships
+-- Did people with family (SibSp > 0 or Parch > 0) survive more?
+SELECT
+	CASE 
+		WHEN SibSp + Parch = 0 THEN 'Alone'
+		ELSE 'With Family'
+	END FAMILY,
+	COUNT(*) AS TotaL_population,
+	SUM(CAST(Survived AS INT)) AS 'Total_Survived',
+	ROUND(SUM(CAST(Survived AS FLOAT)) / COUNT(*), 2) AS survival_rate
+FROM dbo.train
+GROUP BY 
+	CASE 
+		WHEN SibSp + Parch = 0 THEN 'Alone'
+		ELSE 'With Family'
+	END;
+
+-- What is the average family size and its correlation with survival?
+SELECT
+	(SibSp + Parch) 'Family_Size',
+	COUNT(*) AS TotaL_population,
+	SUM(CAST(Survived AS INT)) AS 'Total_Survived',
+	ROUND(SUM(CAST(Survived AS FLOAT)) / COUNT(*), 2) AS survival_rate
+FROM dbo.train
+WHERE (SibSp + Parch) <= 10
+GROUP BY (SibSp + Parch)
+ORDER BY Family_Size;
+
+
+SELECT AVG(CAST(SibSp + Parch AS FLOAT)) AS avg_family_size
+FROM dbo.train;
