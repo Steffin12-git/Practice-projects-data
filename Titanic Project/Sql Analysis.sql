@@ -127,3 +127,10 @@ ORDER BY Family_Size;
 
 SELECT AVG(CAST(SibSp + Parch AS FLOAT)) AS avg_family_size
 FROM dbo.train;
+
+-- 4. Embarkation Port Analysis
+-- 5. Name Analysis
+-- 6. Cabin Analysis
+-- 7. Ticket Analysis
+-- 8. Socioeconomic Status
+--- 9. Survival Prediction
