@@ -210,3 +210,44 @@ ORDER BY Embarked_Ports, Class DESC;
 
 
 
+-- 5. Name Analysis
+-- Can you extract titles from the names (e.g., Mr., Mrs., Miss)?
+-- Did any specific title have higher survival?
+WITH NAMING AS
+(
+	SELECT 
+	PassengerId,
+	SUBSTRING(Name, CHARINDEX(',', Name) + 2, CHARINDEX('.', Name) - CHARINDEX(',', Name) - 2) Title,
+	Survived
+	FROM dbo.train
+)
+SELECT
+Title,
+COUNT(*) Total_Passenger,
+SUM(CAST(Survived AS INT)) Survived_Passengers,
+ROUND(SUM(CAST(Survived AS FLOAT)) / COUNT(*), 2) Survived_Rate
+FROM NAMING
+GROUP BY Title
+ORDER BY Survived_Rate DESC, Total_Passenger DESC;
+
+-- Were certain titles more common in a specific Pclass?
+WITH TITLE AS
+(
+	SELECT 
+		SUBSTRING(Name, CHARINDEX(',', Name) + 2, CHARINDEX('.', Name) - CHARINDEX(',', Name) - 2) AS Title,
+		Pclass,
+		Survived
+	FROM dbo.train
+)
+SELECT 
+Title,
+Pclass AS Class,
+COUNT(*) AS Total_Passenger,
+SUM(CAST(Survived AS INT)) Survived_Passengers,
+ROUND(SUM(CAST(Survived AS FLOAT)) / COUNT(*), 2) Survived_Rate
+FROM
+TITLE
+GROUP BY Title, Pclass
+ORDER BY Title, Pclass;
+
+
