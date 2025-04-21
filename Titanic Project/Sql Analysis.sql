@@ -45,6 +45,10 @@ FROM age_group
 GROUP BY AGE_GROUPS
 ORDER BY survival_rate;
 
+
+
+
+
 -- 2) FARE ANALYSIS
 -- average fare by Pclass
 SELECT 
@@ -128,9 +132,81 @@ ORDER BY Family_Size;
 SELECT AVG(CAST(SibSp + Parch AS FLOAT)) AS avg_family_size
 FROM dbo.train;
 
+
+
+
 -- 4. Embarkation Port Analysis
--- 5. Name Analysis
--- 6. Cabin Analysis
--- 7. Ticket Analysis
--- 8. Socioeconomic Status
---- 9. Survival Prediction
+-- 1) Which port had the highest number of boarders?
+SELECT 
+CASE
+	WHEN Embarked = 'C' THEN 'Cherbourg'
+	WHEN Embarked = 'Q' THEN 'Queenstown'
+	WHEN Embarked = 'S' THEN 'Southampton' 
+END Embarked_Ports,
+COUNT(*) No_of_boarders
+FROM 
+dbo.train
+GROUP BY CASE
+	WHEN Embarked = 'C' THEN 'Cherbourg'
+	WHEN Embarked = 'Q' THEN 'Queenstown'
+	WHEN Embarked = 'S' THEN 'Southampton' 
+END
+ORDER BY No_of_boarders DESC;
+
+-- 2) What was the survival rate per embarkation port?
+WITH PORT_DETAILS AS
+(
+	SELECT 
+		CASE
+			WHEN Embarked = 'C' THEN 'Cherbourg'
+			WHEN Embarked = 'Q' THEN 'Queenstown'
+			WHEN Embarked = 'S' THEN 'Southampton' 
+		END Embarked_Ports,
+		COUNT(*) AS No_of_boarders,
+		SUM(CAST(Survived AS INT)) AS Total_Survived,
+		ROUND(SUM(CAST(Survived AS FLOAT)) / COUNT(*), 2) AS survival_rate
+	FROM 
+	dbo.train
+	GROUP BY CASE
+		WHEN Embarked = 'C' THEN 'Cherbourg'
+		WHEN Embarked = 'Q' THEN 'Queenstown'
+		WHEN Embarked = 'S' THEN 'Southampton' 
+	END
+)
+SELECT 
+	Embarked_Ports,
+	No_of_boarders,
+	Total_Survived,
+	survival_rate
+FROM
+PORT_DETAILS
+ORDER BY survival_rate DESC;
+
+
+-- 3) Was any port associated with higher fare or class?
+WITH Fare_analaysis AS
+(
+	SELECT
+		CASE
+			WHEN Embarked = 'C' THEN 'Cherbourg'
+			WHEN Embarked = 'Q' THEN 'Queenstown'
+			WHEN Embarked = 'S' THEN 'Southampton' 
+		END Embarked_Ports,
+		Pclass AS Class,
+		ROUND(AVG(CAST(Fare AS FLOAT)),2) Average_Fare,
+		COUNT(*) AS Total_Passnger
+	FROM dbo.train
+	WHERE Embarked IN ('C', 'Q', 'S') 
+	GROUP BY CASE
+		WHEN Embarked = 'C' THEN 'Cherbourg'
+		WHEN Embarked = 'Q' THEN 'Queenstown'
+		WHEN Embarked = 'S' THEN 'Southampton' 
+	END, Pclass
+)
+SELECT *
+FROM Fare_analaysis
+ORDER BY Embarked_Ports, Class DESC;
+
+
+
+
