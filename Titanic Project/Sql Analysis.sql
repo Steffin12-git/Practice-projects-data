@@ -251,3 +251,46 @@ GROUP BY Title, Pclass
 ORDER BY Title, Pclass;
 
 
+
+
+-- 6). Socioeconomic Status
+--Can you create a new field called SES_Level?
+-- Do high SES passengers survive more?
+WITH TITLE AS
+(
+	SELECT 
+		SUBSTRING(Name, CHARINDEX(',', Name) + 2, CHARINDEX('.', Name) - CHARINDEX(',', Name) - 2) AS Title,
+		Pclass,
+		Survived,
+		Fare
+	FROM dbo.train
+	WHERE Name IS NOT NULL
+)
+SELECT 
+	CASE
+		WHEN Pclass = 1  AND Title IN ('Capt', 'Col', 'Don', 'Dr', 'Jonkheer', 'Lady', 'Major', 'Rev', 'Sir', 'the Countess') THEN 'High SES'
+		WHEN Pclass = 2  AND Title IN ('Mr', 'Mrs', 'Ms', 'Mme', 'Mlle') THEN 'Middle SES'
+		WHEN Pclass = 3  AND Title IN ('Miss', 'Master') THEN 'Low SES'
+		WHEN Pclass = 1 THEN 'High SES'
+		WHEN Pclass = 2 THEN 'Middle SES'
+		WHEN Pclass = 3 THEN 'Low SES'
+		ELSE 'UNKNOWN'
+	END AS SES_LEVEL,
+	AVG(CAST(Fare AS FLOAT)) Average_price,
+	COUNT(*) Total_Passenger,
+	SUM(CAST(Survived AS INT)) Survived_Passengers,
+	ROUND(SUM(CAST(Survived AS FLOAT)) / COUNT(*), 2) Survived_Rate
+FROM TITLE
+GROUP BY CASE
+	WHEN  Pclass = 1 AND Title IN ('Capt', 'Col', 'Don', 'Dr', 'Jonkheer', 'Lady', 'Major', 'Rev', 'Sir', 'the Countess') THEN 'High SES'
+	WHEN  Pclass = 2 AND Title IN ('Mr', 'Mrs', 'Ms', 'Mme', 'Mlle') THEN 'Middle SES'
+	WHEN  Pclass = 3 AND Title IN ('Miss', 'Master') THEN 'Low SES'
+	WHEN  Pclass = 1 THEN 'High SES'
+	WHEN  Pclass = 2 THEN 'Middle SES'
+	WHEN  Pclass = 3 THEN 'Low SES'
+	ELSE 'UNKNOWN'
+END
+ORDER BY Survived_Rate;
+
+
+
