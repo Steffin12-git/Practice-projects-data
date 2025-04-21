@@ -294,3 +294,40 @@ ORDER BY Survived_Rate;
 
 
 
+
+
+
+
+
+
+
+--- 9. Survival Prediction
+-- Can you simulate who is most likely to survive based on Sex, Pclass, Age, Fare, Title, FamilySize, etc.?
+-- Build a rule-based prediction column and test its accuracy vs real data.
+with cte as
+(
+	SELECT *,
+	SUBSTRING(Name, CHARINDEX(',', Name) + 2, CHARINDEX('.', Name) - CHARINDEX(',', Name) - 2) AS Title
+	from dbo.train
+),
+prediction AS (
+	SELECT 
+		PassengerId,
+		Title,
+		(SibSp + Parch) AS FamilySize,
+		TRY_CAST(Survived AS INT) Survived,
+		CASE 
+			WHEN Sex = 'female' AND Pclass IN (1, 2) THEN 1
+			WHEN Sex = 'female' AND Pclass = 3 AND TRY_CAST(Age AS INT) <= 40 THEN 1
+			WHEN Sex = 'male' AND TRY_CAST(Age AS INT) <= 10 THEN 1
+			WHEN TRY_CAST(Fare AS FLOAT) >= 100 AND Pclass = 1 THEN 1
+			ELSE 0
+		END AS Predicted_Survived
+	FROM cte
+	WHERE TRY_CAST(Age AS INT) IS NOT NULL
+)
+SELECT 
+    COUNT(*) AS total_records,
+    SUM(CASE WHEN Survived = Predicted_Survived THEN 1 ELSE 0 END) AS correct_predictions,
+    SUM(CASE WHEN Survived = Predicted_Survived THEN 1 ELSE 0 END) * 100.0 / COUNT(*) AS accuracy_percentage
+FROM prediction;
