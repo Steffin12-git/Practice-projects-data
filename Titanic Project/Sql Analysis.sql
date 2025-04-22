@@ -295,12 +295,6 @@ ORDER BY Survived_Rate;
 
 
 
-
-
-
-
-
-
 --- 9. Survival Prediction
 -- Can you simulate who is most likely to survive based on Sex, Pclass, Age, Fare, Title, FamilySize, etc.?
 -- Build a rule-based prediction column and test its accuracy vs real data.
@@ -330,4 +324,213 @@ SELECT
     COUNT(*) AS total_records,
     SUM(CASE WHEN Survived = Predicted_Survived THEN 1 ELSE 0 END) AS correct_predictions,
     SUM(CASE WHEN Survived = Predicted_Survived THEN 1 ELSE 0 END) * 100.0 / COUNT(*) AS accuracy_percentage
+FROM prediction;
+
+
+
+
+-- CREATING VIEWS
+
+
+-- vw_survival_rate:-	       Total passengers, total survived, survival rate
+CREATE VIEW vw_survival_rate AS
+SELECT 
+	COUNT(*) AS Total_Passengers,
+	SUM(CAST(Survived AS INT)) AS Total_Survived,
+	ROUND(SUM(CAST(Survived AS FLOAT)) / COUNT(*), 2) AS Survival_Rate
+FROM dbo.train;
+
+
+
+-- vw_survival_by_gender:-	   Survival counts and rates by gender
+CREATE VIEW vw_survival_by_gender AS
+SELECT 
+	Sex,
+	COUNT(*) AS Total_Passengers,
+	SUM(CAST(Survived AS INT)) AS Total_Survived,
+	ROUND(SUM(CAST(Survived AS FLOAT)) / COUNT(*), 2) AS Survival_Rate
+FROM dbo.train
+WHERE Sex IS NOT NULL
+GROUP BY Sex;
+
+
+-- vw_survival_by_age_group:-  Age groups with survival insights
+CREATE VIEW vw_survival_by_age_group AS
+WITH AGE_GROUP_CTE AS (
+	SELECT 
+		*,
+		CASE
+			WHEN TRY_CAST(Age AS float) >= 0 AND TRY_CAST(Age AS float) <= 10 THEN '0-10'
+			WHEN TRY_CAST(Age AS float) > 10 AND TRY_CAST(Age AS float) <= 20 THEN '10-20'
+			WHEN TRY_CAST(Age AS float) > 20 AND TRY_CAST(Age AS float) <= 40 THEN '20-40'
+			WHEN TRY_CAST(Age AS float) > 40 AND TRY_CAST(Age AS float) <= 60 THEN '40-60'
+			WHEN TRY_CAST(Age AS float) > 60 THEN 'OVER 61'
+		END AS Age_Groups
+	FROM dbo.train
+	WHERE TRY_CAST(Age AS float) IS NOT NULL
+)
+SELECT
+	Age_Groups,
+	COUNT(*) AS Total_Passengers,
+	SUM(CAST(Survived AS INT)) AS Total_Survived,
+	ROUND(SUM(CAST(Survived AS FLOAT)) / COUNT(*), 2) AS Survival_Rate
+FROM AGE_GROUP_CTE
+WHERE Age_Groups IS NOT NULL
+GROUP BY Age_Groups;
+
+
+
+-- vw_fare_by_class:-		   Fare averages per Pclass
+CREATE VIEW vw_fare_by_class AS
+SELECT
+	CASE
+		WHEN Pclass = 1 THEN '1st Class'
+		WHEN Pclass = 2 THEN '2nd Class'
+		WHEN Pclass = 3 THEN '3rd Class'
+	END AS Ticket_Class,
+	ROUND(AVG(CAST(Fare AS FLOAT)), 2) AS Avg_Fare
+FROM dbo.train
+GROUP BY Pclass;
+
+
+
+-- vw_fare_embarked:-		   Fare and survival by embarkation
+CREATE VIEW vw_fare_embarked AS
+SELECT
+	CASE
+		WHEN Embarked = 'C' THEN 'Cherbourg'
+		WHEN Embarked = 'Q' THEN 'Queenstown'
+		WHEN Embarked = 'S' THEN 'Southampton' 
+	END Embarked_Ports,
+	ROUND(AVG(CAST(Fare AS FLOAT)),2) Average_Fare,
+	COUNT(*) AS Total_Passnger,
+	SUM(CAST(Survived AS INT)) AS Total_Survived,
+	ROUND(SUM(CAST(Survived AS FLOAT)) / COUNT(*), 2) AS Survival_Rate
+FROM dbo.train
+WHERE Embarked IN ('C', 'Q', 'S') 
+GROUP BY 
+CASE
+	WHEN Embarked = 'C' THEN 'Cherbourg'
+	WHEN Embarked = 'Q' THEN 'Queenstown'
+	WHEN Embarked = 'S' THEN 'Southampton' 
+END;
+
+
+
+-- vw_family_survival:-		   Survival grouped by family size or alone
+CREATE VIEW vw_family_survival AS
+SELECT 
+	CASE
+		WHEN (SibSp + Parch) = 0 THEN 'Alone'
+		ELSE 'With Family'
+	END AS Family_Status,
+	COUNT(*) AS Total_Passnger,
+	SUM(CAST(Survived AS INT)) AS Total_Survived,
+	ROUND(SUM(CAST(Survived AS FLOAT)) / COUNT(*), 2) AS Survival_Rate
+FROM dbo.train
+GROUP BY 
+CASE
+	WHEN (SibSp + Parch) = 0 THEN 'Alone'
+	ELSE 'With Family'
+END;
+
+
+
+-- vw_name_titles:-			   Title frequency and survival
+CREATE VIEW vw_name_titles AS
+WITH NAMING AS
+(
+	SELECT 
+	SUBSTRING(Name, CHARINDEX(',', Name) + 2, CHARINDEX('.', Name) - CHARINDEX(',', Name) - 2) Title ,
+	Survived
+	FROM dbo.train
+)
+SELECT 
+	CASE
+		WHEN Title IN ('Capt', 'Col', 'Don', 'Dr', 'Jonkheer', 'Lady', 'Major', 'Rev', 'Sir', 'the Countess') THEN 'High'
+		WHEN Title IN ('Mr', 'Mrs', 'Ms', 'Mme', 'Mlle') THEN 'Middle'
+		WHEN Title IN ('Miss', 'Master') THEN 'Low'
+		ELSE 'UNKNOWN'
+	END AS Title_LeveL,
+	COUNT(*) AS Total_Passnger,
+	SUM(CAST(Survived AS INT)) AS Total_Survived,
+	ROUND(SUM(CAST(Survived AS FLOAT)) / COUNT(*), 2) AS Survival_Rate
+FROM NAMING
+GROUP BY 
+CASE
+	WHEN Title IN ('Capt', 'Col', 'Don', 'Dr', 'Jonkheer', 'Lady', 'Major', 'Rev', 'Sir', 'the Countess') THEN 'High'
+	WHEN Title IN ('Mr', 'Mrs', 'Ms', 'Mme', 'Mlle') THEN 'Middle'
+	WHEN Title IN ('Miss', 'Master') THEN 'Low'
+	ELSE 'UNKNOWN'
+END;
+
+
+
+
+-- vw_ses_analysis:-		   SES level, fare, survival breakdown
+CREATE VIEW vw_ses_analysis AS
+WITH TITLE AS
+(
+	SELECT 
+		SUBSTRING(Name, CHARINDEX(',', Name) + 2, CHARINDEX('.', Name) - CHARINDEX(',', Name) - 2) AS Title,
+		Pclass,
+		Survived,
+		Fare
+	FROM dbo.train
+	WHERE Name IS NOT NULL
+)
+SELECT 
+	CASE
+		WHEN Pclass = 1  AND Title IN ('Capt', 'Col', 'Don', 'Dr', 'Jonkheer', 'Lady', 'Major', 'Rev', 'Sir', 'the Countess') THEN 'High SES'
+		WHEN Pclass = 2  AND Title IN ('Mr', 'Mrs', 'Ms', 'Mme', 'Mlle') THEN 'Middle SES'
+		WHEN Pclass = 3  AND Title IN ('Miss', 'Master') THEN 'Low SES'
+		WHEN Pclass = 1 THEN 'High SES'
+		WHEN Pclass = 2 THEN 'Middle SES'
+		WHEN Pclass = 3 THEN 'Low SES'
+		ELSE 'UNKNOWN'
+	END AS SES_LEVEL,
+	ROUND(AVG(CAST(Fare AS FLOAT)),2) Average_price,
+	COUNT(*) Total_Passenger,
+	SUM(CAST(Survived AS INT)) Survived_Passengers,
+	ROUND(SUM(CAST(Survived AS FLOAT)) / COUNT(*), 2) Survived_Rate
+FROM TITLE
+GROUP BY CASE
+	WHEN  Pclass = 1 AND Title IN ('Capt', 'Col', 'Don', 'Dr', 'Jonkheer', 'Lady', 'Major', 'Rev', 'Sir', 'the Countess') THEN 'High SES'
+	WHEN  Pclass = 2 AND Title IN ('Mr', 'Mrs', 'Ms', 'Mme', 'Mlle') THEN 'Middle SES'
+	WHEN  Pclass = 3 AND Title IN ('Miss', 'Master') THEN 'Low SES'
+	WHEN  Pclass = 1 THEN 'High SES'
+	WHEN  Pclass = 2 THEN 'Middle SES'
+	WHEN  Pclass = 3 THEN 'Low SES'
+	ELSE 'UNKNOWN'
+END;
+
+
+-- vw_survival_prediction:-    Predicted vs actual survival and accuracy
+CREATE VIEW vw_survival_prediction AS
+WITH cte AS (
+    SELECT *,
+        SUBSTRING(Name, CHARINDEX(',', Name) + 2, CHARINDEX('.', Name) - CHARINDEX(',', Name) - 2) AS Title
+    FROM dbo.train
+),
+prediction AS (
+    SELECT 
+        PassengerId,
+        Survived,
+        CASE 
+            WHEN Sex = 'female' AND Pclass IN (1, 2) THEN 1
+            WHEN Sex = 'female' AND Pclass = 3 AND TRY_CAST(Age AS INT) <= 40 THEN 1
+            WHEN Sex = 'male' AND TRY_CAST(Age AS INT) <= 10 THEN 1
+            WHEN TRY_CAST(Fare AS FLOAT) >= 100 AND Pclass = 1 THEN 1
+            ELSE 0
+        END AS Predicted_Survived
+    FROM cte
+    WHERE TRY_CAST(Age AS INT) IS NOT NULL
+)
+SELECT 
+    COUNT(*) AS total_records,
+    SUM(CASE WHEN Survived = Predicted_Survived THEN 1 ELSE 0 END) AS correct_predictions,
+    ROUND(
+        SUM(CASE WHEN Survived = Predicted_Survived THEN 1 ELSE 0 END) * 100.0 / COUNT(*),
+        2
+    ) AS accuracy_percentage
 FROM prediction;
