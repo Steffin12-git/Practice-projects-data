@@ -153,3 +153,54 @@ FROM dbo.flights
 WHERE ARRIVAL_DELAY IS NULL;
 
 
+--- 
+UPDATE dbo.flights
+SET DEPARTURE_TIME = 0  -- or you can set it to any valid time, e.g., 1200 for noon
+WHERE DEPARTURE_TIME IS NULL;
+
+UPDATE dbo.flights
+SET DEPARTURE_TIME = 1200  -- or any other valid time like 0 (midnight)
+WHERE ISNULL(CAST(DEPARTURE_TIME AS VARCHAR(20)), '') = '';
+
+
+
+
+--- SOLVING ERROR IN ACTUAL_DEPARTURE_TIME COLUMN (24:00:00 TO 00:00:00)
+-- First, drop the existing computed column if it exists
+ALTER TABLE dbo.flights
+DROP COLUMN ACTUAL_DEPARTURE_TIME;
+
+
+-- Add the column back with proper formatting and condition
+WITH NULL_CTE AS(
+SELECT
+    TRY_CAST(ACTUAL_DEPARTURE_TIME AS TIME(0)) AS Safe_ACTUAL_DEPARTURE_TIME
+FROM dbo.flights
+)
+SELECT * FROM NULL_CTE WHERE Safe_ACTUAL_DEPARTURE_TIME IS NULL;
+
+
+
+SELECT ACTUAL_DEPARTURE_TIME
+FROM dbo.flights
+WHERE TRY_CAST(ACTUAL_DEPARTURE_TIME AS TIME(0)) IS NULL
+AND ACTUAL_DEPARTURE_TIME IS NOT NULL;
+
+
+
+
+ALTER TABLE dbo.flights
+ADD ACTUAL_DEPARTURE_TIME AS (
+    CASE
+        WHEN LEN(CAST(DEPARTURE_TIME AS VARCHAR(20))) = 4 THEN
+            CASE
+                WHEN (DEPARTURE_TIME / 100) = 24 THEN CAST('00:00:00' AS TIME(0))
+                ELSE CAST(
+                    RIGHT('00' + CAST(DEPARTURE_TIME / 100 AS VARCHAR(4)), 2) + ':' +
+                    RIGHT('00' + CAST(DEPARTURE_TIME % 100 AS VARCHAR(2)), 2) + ':00'
+                AS TIME(0))
+            END
+        ELSE NULL
+    END
+);
+
