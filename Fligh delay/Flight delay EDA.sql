@@ -1,4 +1,4 @@
--- EDA ANALYSIS
+﻿-- EDA ANALYSIS
 USE [flight-delays]
 GO
 
@@ -18,6 +18,11 @@ FROM dbo.flights
 SELECT * 
 FROM 
 dbo.airlines
+
+
+SELECT * 
+FROM 
+dbo.airports
 
 SELECT 
 	AL.AIRLINE AIRLINE,
@@ -144,4 +149,27 @@ FROM dbo.flights
 GROUP BY YEAR
 ORDER BY YEAR;
 
+---------------------------------------------------------------------------------------------------------------------------------------
 
+
+-- Flight Route Analysis:
+	-- Which flight routes (origin ➝ destination) have the most delays?
+	-- What are the average departure and arrival delays for the top 5 most common flight routes?
+
+-- Which flight routes (origin ➝ destination) have the most delays?
+SELECT 
+	ORIGIN_AIRPORT,
+	DESTINATION_AIRPORT,
+	COUNT(*) AS TOTAL_NUM_FLIGHTS,
+	AVG(DEPARTURE_DELAY) AVG_DELAYED_DEPARTURE,
+	AVG(ARRIVAL_DELAY) AVG_DELAYED_ARRIVAL,
+	SUM(CASE WHEN DEPARTURE_DELAY > 0 THEN 1 ELSE 0 END) AS NUM_DELAYED_FLIGHTS 
+FROM dbo.flights
+WHERE DEPARTURE_DELAY > 0 
+	AND ARRIVAL_DELAY > 0  
+	AND DEPARTURE_DELAY IS NOT NULL  
+	AND ARRIVAL_DELAY IS NOT NULL
+GROUP BY ORIGIN_AIRPORT,
+	DESTINATION_AIRPORT
+HAVING COUNT(*) > 50
+ORDER BY  AVG_DELAYED_ARRIVAL;
