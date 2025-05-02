@@ -223,4 +223,46 @@ GROUP BY
 HAVING COUNT(*) > 50
 ORDER BY  TOTAL_NUM_FLIGHTS DESC;
 
+---------------------------------------------------------------------------------------------------------------------------------------
+
+-- Delay Causes:
+	-- Is there any correlation between the distance of the flight and delay?
+	-- Do certain aircraft (tail numbers) have a history of being more delayed?
+
+-- Is there any correlation between the distance of the flight and delay?
+WITH Mean_CTE AS
+(
+	SELECT 
+		ROUND(AVG(CAST(DISTANCE AS FLOAT)), 2) Mean_Distance,
+		ROUND(AVG(CAST(ARRIVAL_DELAY AS FLOAT)), 2) Mean_delay
+	FROM dbo.flights
+)
+SELECT 
+	ROUND(SUM((CAST(F.DISTANCE AS FLOAT) - M.Mean_Distance) * (CAST(F.ARRIVAL_DELAY AS FLOAT) - M.Mean_delay)) 
+	/
+	SQRT(SUM(POWER(CAST(F.DISTANCE AS FLOAT) - M.Mean_Distance, 2)) * SUM(POWER(CAST(F.ARRIVAL_DELAY AS FLOAT) - M.Mean_delay, 2))), 2) AS Correlation,
+	M.Mean_Distance,
+	M.Mean_delay
+FROM dbo.flights F
+CROSS JOIN Mean_CTE M
+GROUP BY 	M.Mean_Distance,
+	M.Mean_delay;
+
+-- There is no meaningful correlation between flight distance and arrival delay in your dataset.
+--  So, longer flights are not necessarily more delayed than shorter ones — at least not in a linear, statistically significant way.
+
+-- Do certain aircraft (tail numbers) have a history of being more delayed?
+SELECT TOP 10
+	TAIL_NUMBER,
+	COUNT(*) AS Total_Flights,
+	AVG(ARRIVAL_DELAY) AS Avg_Arrival_Delay,
+	AVG(DEPARTURE_DELAY) AS Avg_Departure_Delay
+FROM dbo.flights
+WHERE 
+	TAIL_NUMBER IS NOT NULL AND 
+	ARRIVAL_DELAY IS NOT NULL AND 
+	DEPARTURE_DELAY IS NOT NULL
+GROUP BY TAIL_NUMBER
+HAVING COUNT(*) > 30
+ORDER BY Avg_Departure_Delay DESC;
 
